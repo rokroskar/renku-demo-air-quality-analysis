@@ -20,7 +20,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: rokroskar/renku-demo-air-quality-analysis
+          images: ghcr.io/rokroskar/renku-demo-air-quality-analysis/vscode
           tags: |
             type=sha,prefix=
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
