@@ -23,8 +23,8 @@ jobs:
           images: ghcr.io/${{ github.repository }}/renku-image
           tags: |
             type=sha,prefix=
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}},event=tag
-      - uses: swissdatasciencecenter/renku-frontend-buildpacks/actions/build-image@000-add-build-image-action
+      - uses: swissdatasciencecenter/renku-frontend-buildpacks/actions/build-image@0.1
         with: 
           tags: ${{ steps.meta.outputs.tags }}
