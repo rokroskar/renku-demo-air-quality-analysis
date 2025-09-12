@@ -25,6 +25,6 @@ jobs:
             type=sha,prefix=
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}},event=tag
-      - uses: swissdatasciencecenter/renku-frontend-buildpacks/actions/build-image@0.1
+      - uses: swissdatasciencecenter/renku-frontend-buildpacks/actions/build-image@v0.1
         with: 
           tags: ${{ steps.meta.outputs.tags }}
