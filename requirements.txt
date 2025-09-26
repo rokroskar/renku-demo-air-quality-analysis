@@ -1,3 +1,4 @@
 pandas
 matplotlib
-jupyter-ai langchain-anthropic
+jupyter-ai 
+langchain-anthropic
