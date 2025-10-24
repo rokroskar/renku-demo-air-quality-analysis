@@ -1,8 +1,10 @@
+name: base
 channels:
   - nodefaults
   - conda-forge
 dependencies:
   - libgl
+  - pip
   - pip: 
     https://github.com/kwsong0113/diffusion-forcing-transformer
   
