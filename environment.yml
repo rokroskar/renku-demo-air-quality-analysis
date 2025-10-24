@@ -6,5 +6,5 @@ dependencies:
   - libgl
   - pip
   - pip: 
-    - https://github.com/kwsong0113/diffusion-forcing-transformer
+    - git+https://github.com/kwsong0113/diffusion-forcing-transformer.git
   
