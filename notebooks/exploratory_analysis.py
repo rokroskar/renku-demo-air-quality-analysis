@@ -106,6 +106,17 @@ wide_mean
 
 # %% [markdown]
 # ## Monthly trends
+#
+# We look at monthly means in two ways:
+#
+# 1. the common comparison window, which is best for apples-to-apples summaries;
+# 2. each city's full available record, which helps check whether the common-window
+#    plot is artificially making the time series look too similar.
+#
+# Because Zurich, London, and Berlin are all northern-hemisphere cities at broadly
+# similar latitudes, some synchronized annual seasonality is expected. London and
+# Berlin also come from the same Open-Meteo/CAMS Europe product, so source/product
+# effects should be kept in mind when interpreting similarities.
 
 # %%
 monthly = monthly_means(common)
@@ -117,13 +128,82 @@ for pollutant in [c for c in POLLUTANT_COLUMNS if c in monthly.columns]:
         ax.plot(city_df["month"], city_df[pollutant], marker="o", linewidth=1.5, label=city)
     if pollutant in WHO_DAILY_GUIDELINES:
         ax.axhline(WHO_DAILY_GUIDELINES[pollutant], color="black", linestyle="--", linewidth=1, label="WHO daily guideline")
-    ax.set_title(f"Monthly mean {pollutant.replace('_', '.').upper()}")
+    ax.set_title(f"Common-window monthly mean {pollutant.replace('_', '.').upper()}")
     ax.set_xlabel("Month")
     ax.set_ylabel("µg/m³")
     ax.legend()
     fig.autofmt_xdate()
     fig.tight_layout()
     fig.savefig(FIG_DIR / f"monthly_{pollutant}_comparison.png", dpi=150)
+    plt.show()
+
+# %%
+monthly_full = monthly_means(air)
+monthly_full.to_csv(TABLE_DIR / "monthly_city_pollutants_full_record.csv", index=False)
+
+for pollutant in [c for c in POLLUTANT_COLUMNS if c in monthly_full.columns]:
+    fig, ax = plt.subplots(figsize=(10, 5))
+    for city, city_df in monthly_full.groupby("city"):
+        ax.plot(city_df["month"], city_df[pollutant], linewidth=1.0, alpha=0.85, label=city)
+    if pollutant in WHO_DAILY_GUIDELINES:
+        ax.axhline(WHO_DAILY_GUIDELINES[pollutant], color="black", linestyle="--", linewidth=1, label="WHO daily guideline")
+    ax.set_title(f"Full-record monthly mean {pollutant.replace('_', '.').upper()}")
+    ax.set_xlabel("Month")
+    ax.set_ylabel("µg/m³")
+    ax.legend()
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    fig.savefig(FIG_DIR / f"monthly_full_record_{pollutant}_comparison.png", dpi=150)
+    plt.show()
+
+# %% [markdown]
+# ## Seasonal pattern check
+#
+# To separate shared seasonality from city-specific deviations, compute a monthly
+# climatology by calendar month and then plot anomalies from each city's own
+# monthly climatology. If similarities are mostly seasonal, the climatology plots
+# will align while anomalies should be less tightly synchronized.
+
+# %%
+seasonal = air.copy()
+seasonal["calendar_month"] = seasonal["date"].dt.month
+climatology = (
+    seasonal.groupby(["city", "calendar_month"], as_index=False)[POLLUTANT_COLUMNS]
+    .mean()
+)
+climatology.to_csv(TABLE_DIR / "city_monthly_climatology.csv", index=False)
+
+for pollutant in [c for c in POLLUTANT_COLUMNS if c in climatology.columns]:
+    fig, ax = plt.subplots(figsize=(8, 5))
+    for city, city_df in climatology.groupby("city"):
+        ax.plot(city_df["calendar_month"], city_df[pollutant], marker="o", linewidth=1.5, label=city)
+    ax.set_title(f"Calendar-month climatology: {pollutant.replace('_', '.').upper()}")
+    ax.set_xlabel("Calendar month")
+    ax.set_ylabel("µg/m³")
+    ax.set_xticks(range(1, 13))
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(FIG_DIR / f"climatology_{pollutant}_comparison.png", dpi=150)
+    plt.show()
+
+# %%
+anomalies = monthly_full.copy()
+anomalies["calendar_month"] = anomalies["month"].dt.month
+for pollutant in [c for c in POLLUTANT_COLUMNS if c in anomalies.columns]:
+    baseline = climatology[["city", "calendar_month", pollutant]].rename(columns={pollutant: f"{pollutant}_climatology"})
+    plot_df = anomalies.merge(baseline, on=["city", "calendar_month"], how="left")
+    plot_df[f"{pollutant}_anomaly"] = plot_df[pollutant] - plot_df[f"{pollutant}_climatology"]
+    fig, ax = plt.subplots(figsize=(10, 5))
+    for city, city_df in plot_df.groupby("city"):
+        ax.plot(city_df["month"], city_df[f"{pollutant}_anomaly"], linewidth=1.0, alpha=0.85, label=city)
+    ax.axhline(0, color="black", linestyle="--", linewidth=1)
+    ax.set_title(f"Monthly anomaly from city climatology: {pollutant.replace('_', '.').upper()}")
+    ax.set_xlabel("Month")
+    ax.set_ylabel("µg/m³ anomaly")
+    ax.legend()
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    fig.savefig(FIG_DIR / f"monthly_anomaly_{pollutant}_comparison.png", dpi=150)
     plt.show()
 
 # %% [markdown]
