@@ -1,20 +1,20 @@
 # %% [markdown]
-# # Comparative Air Quality Analysis: Zurich, New York City, and Delhi
+# # Comparative Air Quality Analysis across European Cities
 #
 # This notebook compares the original Zurich daily monitoring dataset with two
-# additional Zenodo DOI data connectors:
+# additional European Zenodo DOI data connectors:
 #
-# - New York City: `10.5281/zenodo.18673876`
-# - Delhi: `10.5281/zenodo.18673773`
+# - London: `10.5281/zenodo.18673871`
+# - Berlin: `10.5281/zenodo.18677070`
 #
 # The DOI records are exposed in Renku through rclone's read-only DOI backend. In
 # a Renku session they are mounted as data connectors; locally they can be
 # explored with commands such as:
 #
 # ```bash
-# rclone config create nyc doi doi 10.5281/zenodo.18673876
-# rclone lsf nyc:
-# rclone backend metadata nyc:
+# rclone config create london doi doi 10.5281/zenodo.18673871
+# rclone lsf london:
+# rclone backend metadata london:
 # ```
 
 # %%
@@ -73,9 +73,9 @@ for city, meta in metadata.items():
 # %% [markdown]
 # ## Restrict to the common time window
 #
-# The New York City and Delhi DOI datasets start in August 2022, while Zurich has
-# a much longer record. For fair comparison, most summaries below use the period
-# where all three cities overlap.
+# The London and Berlin DOI datasets start in 2013, while Zurich has its own
+# monitoring record. For fair comparison, most summaries below use the period
+# where all cities overlap.
 
 # %%
 start, end = overlapping_period(air)
@@ -176,7 +176,7 @@ for pollutant in [c for c in POLLUTANT_COLUMNS if c in annual_means.columns]:
 # 1. Which city has the highest average and peak concentrations during the common
 #    period?
 # 2. How often does each city exceed WHO daily guideline values?
-# 3. Are seasonal/monthly patterns similar across Zurich, New York City, and Delhi?
+# 3. Are seasonal/monthly patterns similar across Zurich, London, and Berlin?
 
 # %%
 for pollutant in ["pm2_5", "pm10", "nitrogen_dioxide"]:

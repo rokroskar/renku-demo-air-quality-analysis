@@ -17,15 +17,15 @@ import pandas as pd
 POLLUTANT_COLUMNS = ["pm2_5", "pm10", "nitrogen_dioxide", "ozone"]
 
 CITY_DATASETS = {
-    "New York City": {
-        "doi": "10.5281/zenodo.18673876",
-        "zip_name": "new-york-city-us-5128581.zip",
-        "renku_target": "dataset-air-quality-dataset-fo-doi-10.5281-zenodo.18673876",
+    "London": {
+        "doi": "10.5281/zenodo.18673871",
+        "zip_name": "london-gb-2643743.zip",
+        "renku_target": "dataset-air-quality-dataset-fo-doi-10.5281-zenodo.18673871",
     },
-    "Delhi": {
-        "doi": "10.5281/zenodo.18673773",
-        "zip_name": "delhi-in-1273294.zip",
-        "renku_target": "dataset-air-quality-dataset-fo-doi-10.5281-zenodo.18673773",
+    "Berlin": {
+        "doi": "10.5281/zenodo.18677070",
+        "zip_name": "berlin-de-2950159.zip",
+        "renku_target": "dataset-air-quality-dataset-fo-doi-10.5281-zenodo.18677070",
     },
 }
 
@@ -134,7 +134,7 @@ def _candidate_doi_dirs(city: str, root: Path | None = None) -> list[Path]:
                 base / info["renku_target"],
                 base / slug,
                 base / city.lower().replace(" ", ""),
-                base / ".tmp_doi_explore" / "extracted" / ("nyc" if city == "New York City" else "delhi"),
+                base / ".tmp_doi_explore" / "extracted" / slug,
             ]
         )
     return list(dict.fromkeys(dirs))
