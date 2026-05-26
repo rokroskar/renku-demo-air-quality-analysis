@@ -1,0 +1,6 @@
+.tmp_doi_explore/
+__pycache__/
+.ipynb_checkpoints/
+results/figures/*.png
+results/tables/*.csv
+.pi
