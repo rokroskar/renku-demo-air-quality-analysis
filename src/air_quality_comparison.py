@@ -29,6 +29,24 @@ CITY_DATASETS = {
     },
 }
 
+REGIONAL_CITY_DATASETS = {
+    "Athens": {
+        "doi": "10.5281/zenodo.11220965",
+        "file_name": "athens.csv",
+        "renku_target": "regional-datasets-for-air-qual-doi-10.5281-zenodo.11220965",
+    },
+    "Zaragoza": {
+        "doi": "10.5281/zenodo.11220965",
+        "file_name": "zaragoza.csv",
+        "renku_target": "regional-datasets-for-air-qual-doi-10.5281-zenodo.11220965",
+    },
+    "Ancona": {
+        "doi": "10.5281/zenodo.11220965",
+        "file_name": "ancona.csv",
+        "renku_target": "regional-datasets-for-air-qual-doi-10.5281-zenodo.11220965",
+    },
+}
+
 PARAMETER_MAP = {
     "pm2.5": "pm2_5",
     "pm2_5": "pm2_5",
@@ -191,11 +209,70 @@ def _standardize_open_meteo_city(df: pd.DataFrame, city: str) -> pd.DataFrame:
     return out[keep].dropna(subset=["date"])
 
 
+def _candidate_regional_csvs(city: str, root: Path | None = None) -> list[Path]:
+    info = REGIONAL_CITY_DATASETS[city]
+    dirs: list[Path] = []
+    for base in search_roots(root):
+        dirs.extend(
+            [
+                base / info["renku_target"] / info["file_name"],
+                base / info["file_name"],
+                base / ".tmp_doi_explore" / "downloads" / "regional-europe" / info["file_name"],
+            ]
+        )
+    return list(dict.fromkeys(dirs))
+
+
+def load_regional_city(city: str, root: Path | None = None, chunksize: int = 250_000) -> tuple[pd.DataFrame, dict]:
+    """Load one city from the regional European hourly CSV DOI dataset.
+
+    The regional dataset has one row per station/grid point and hour with columns
+    Date, NO2, O3, and PM10. We aggregate to daily city-level means across all
+    available station-hour observations so it can be compared with the other
+    daily city series.
+    """
+    info = REGIONAL_CITY_DATASETS[city]
+    for csv_path in _candidate_regional_csvs(city, root):
+        if not csv_path.exists():
+            continue
+        sums: dict[pd.Timestamp, pd.Series] = {}
+        counts: dict[pd.Timestamp, pd.Series] = {}
+        usecols = ["Date", "NO2", "O3", "PM10"]
+        rename = {"NO2": "nitrogen_dioxide", "O3": "ozone", "PM10": "pm10"}
+        for chunk in pd.read_csv(csv_path, usecols=usecols, chunksize=chunksize):
+            chunk["date"] = parse_daily_dates(chunk["Date"])
+            for source_col, target_col in rename.items():
+                chunk[target_col] = pd.to_numeric(chunk[source_col], errors="coerce")
+            grouped = chunk.groupby("date")[["nitrogen_dioxide", "ozone", "pm10"]]
+            chunk_sums = grouped.sum(min_count=1)
+            chunk_counts = grouped.count()
+            for date, row in chunk_sums.iterrows():
+                sums[date] = sums.get(date, pd.Series(0.0, index=chunk_sums.columns)).add(row, fill_value=0)
+            for date, row in chunk_counts.iterrows():
+                counts[date] = counts.get(date, pd.Series(0, index=chunk_counts.columns)).add(row, fill_value=0)
+
+        daily = pd.DataFrame.from_dict(sums, orient="index").sort_index()
+        count_df = pd.DataFrame.from_dict(counts, orient="index").sort_index()
+        daily = daily.divide(count_df.where(count_df > 0))
+        daily = daily.reset_index(names="date")
+        daily["city"] = city
+        daily["source"] = str(csv_path)
+        metadata = {"title": f"Regional Datasets for Air Quality Monitoring in European Cities: {city}", "doi": info["doi"]}
+        return daily, metadata
+
+    searched = "\n".join(str(p) for p in _candidate_regional_csvs(city, root))
+    raise FileNotFoundError(f"Could not find regional European data for {city}. Searched:\n{searched}")
+
+
 def load_all_cities(root: Path | None = None) -> tuple[pd.DataFrame, dict]:
     frames = [load_zurich_daily(root)]
     metadata = {"Zurich": {"title": "City of Zurich open government daily air-quality data"}}
     for city in CITY_DATASETS:
         city_df, city_metadata = load_doi_city(city, root)
+        frames.append(city_df)
+        metadata[city] = city_metadata
+    for city in REGIONAL_CITY_DATASETS:
+        city_df, city_metadata = load_regional_city(city, root)
         frames.append(city_df)
         metadata[city] = city_metadata
     combined = pd.concat(frames, ignore_index=True, sort=False)

@@ -1,11 +1,12 @@
 # %% [markdown]
 # # Comparative Air Quality Analysis across European Cities
 #
-# This notebook compares the original Zurich daily monitoring dataset with two
-# additional European Zenodo DOI data connectors:
+# This notebook compares the original Zurich daily monitoring dataset with
+# additional European DOI data connectors:
 #
 # - London: `10.5281/zenodo.18673871`
 # - Berlin: `10.5281/zenodo.18677070`
+# - Athens, Zaragoza, and Ancona: `10.5281/zenodo.11220965`
 #
 # The DOI records are exposed in Renku through rclone's read-only DOI backend. In
 # a Renku session they are mounted as data connectors; locally they can be
@@ -33,6 +34,7 @@ from air_quality_comparison import (  # noqa: E402
     POLLUTANT_COLUMNS,
     WHO_DAILY_GUIDELINES,
     CITY_DATASETS,
+    REGIONAL_CITY_DATASETS,
     comparison_window,
     load_all_cities,
     monthly_means,
@@ -68,14 +70,16 @@ for city, meta in metadata.items():
     print(f"\n{city}")
     if city in CITY_DATASETS:
         print(f"DOI: {CITY_DATASETS[city]['doi']}")
+    elif city in REGIONAL_CITY_DATASETS:
+        print(f"DOI: {REGIONAL_CITY_DATASETS[city]['doi']}")
     print(meta.get("title", ""))
 
 # %% [markdown]
 # ## Restrict to the common time window
 #
-# The London and Berlin DOI datasets start in 2013, while Zurich has its own
-# monitoring record. For fair comparison, most summaries below use the period
-# where all cities overlap.
+# London and Berlin start in 2013, while Athens, Zaragoza, and Ancona start in
+# 2020 and Zurich has its own monitoring record. For fair comparison, most
+# summaries below use the period where all cities overlap.
 
 # %%
 start, end = overlapping_period(air)
@@ -113,10 +117,13 @@ wide_mean
 # 2. each city's full available record, which helps check whether the common-window
 #    plot is artificially making the time series look too similar.
 #
-# Because Zurich, London, and Berlin are all northern-hemisphere cities at broadly
-# similar latitudes, some synchronized annual seasonality is expected. London and
-# Berlin also come from the same Open-Meteo/CAMS Europe product, so source/product
-# effects should be kept in mind when interpreting similarities.
+# Because all cities are in the northern hemisphere, some synchronized annual
+# seasonality is expected. The expanded set includes a wider latitude and climate
+# gradient, including Mediterranean cities, which helps test whether the shared
+# seasonal cycle is overly dominating the comparison. London and Berlin come from
+# the same Open-Meteo/CAMS Europe product, while Athens/Zaragoza/Ancona use a
+# separate regional European city dataset, so source/product effects should still
+# be kept in mind when interpreting similarities.
 
 # %%
 monthly = monthly_means(common)
@@ -256,7 +263,7 @@ for pollutant in [c for c in POLLUTANT_COLUMNS if c in annual_means.columns]:
 # 1. Which city has the highest average and peak concentrations during the common
 #    period?
 # 2. How often does each city exceed WHO daily guideline values?
-# 3. Are seasonal/monthly patterns similar across Zurich, London, and Berlin?
+# 3. Are seasonal/monthly patterns similar across northern and southern European cities?
 
 # %%
 for pollutant in ["pm2_5", "pm10", "nitrogen_dioxide"]:
