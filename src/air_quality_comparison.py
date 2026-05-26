@@ -48,6 +48,16 @@ WHO_DAILY_GUIDELINES = {
 }
 
 
+def parse_daily_dates(values: pd.Series) -> pd.Series:
+    """Parse dates consistently as timezone-naive daily timestamps.
+
+    The Zurich CSVs contain timezone-naive dates while the DOI datasets can contain
+    timezone-aware ISO timestamps. Normalizing via UTC avoids mixed tz-aware/tz-naive
+    values, which Pandas cannot sort or compare in a single column.
+    """
+    return pd.to_datetime(values, errors="coerce", utc=True).dt.tz_localize(None).dt.normalize()
+
+
 def project_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
@@ -97,7 +107,7 @@ def load_zurich_daily(root: Path | None = None) -> pd.DataFrame:
     frames = [pd.read_csv(path) for path in sorted(data_dir.glob("ugz_ogd_air_d1_*.csv"))]
     raw = pd.concat(frames, ignore_index=True)
 
-    raw["date"] = pd.to_datetime(raw["Datum"], errors="coerce")
+    raw["date"] = parse_daily_dates(raw["Datum"])
     raw["value"] = pd.to_numeric(raw["Wert"], errors="coerce")
     raw["pollutant"] = raw["Parameter"].astype(str).str.lower().str.strip().map(PARAMETER_MAP)
     raw = raw.dropna(subset=["date", "value", "pollutant"])
@@ -172,7 +182,7 @@ def load_doi_city(city: str, root: Path | None = None) -> tuple[pd.DataFrame, di
 
 def _standardize_open_meteo_city(df: pd.DataFrame, city: str) -> pd.DataFrame:
     out = df.copy()
-    out["date"] = pd.to_datetime(out["date"], errors="coerce")
+    out["date"] = parse_daily_dates(out["date"])
     for column in POLLUTANT_COLUMNS + ["carbon_monoxide", "sulphur_dioxide", "us_aqi", "european_aqi"]:
         if column in out.columns:
             out[column] = pd.to_numeric(out[column], errors="coerce")
@@ -189,6 +199,7 @@ def load_all_cities(root: Path | None = None) -> tuple[pd.DataFrame, dict]:
         frames.append(city_df)
         metadata[city] = city_metadata
     combined = pd.concat(frames, ignore_index=True, sort=False)
+    combined["date"] = parse_daily_dates(combined["date"])
     combined = combined.sort_values(["city", "date"]).reset_index(drop=True)
     return combined, metadata
 
